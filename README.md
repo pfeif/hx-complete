@@ -59,4 +59,4 @@ The TL;DR of the license is that you can do whatever you want with the extension
 [vscode-custom-data]: https://github.com/microsoft/vscode-custom-data
 [vscode-html-languageservice]: https://github.com/microsoft/vscode-html-languageservice
 
-[example-gif]: https://github.com/pfeif/hx-complete/blob/main/static/example.gif
+[example-gif]: https://github.com/pfeif/hx-complete/blob/main/static/example.gif?raw=true
