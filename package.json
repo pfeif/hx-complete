@@ -27,7 +27,7 @@
     },
     "files": [
         "data",
-        "static",
+        "static/icon.png",
         "LICENSE.md"
     ],
     "qna": "marketplace",
