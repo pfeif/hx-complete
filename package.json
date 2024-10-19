@@ -1,0 +1,35 @@
+{
+    "name": "hx-complete",
+    "displayName": "hx-complete",
+    "description": "HTMX attribute auto-completion support for Visual Studio Code",
+    "version": "2024.10.14",
+    "publisher": "pfeif",
+    "repository": "https://github.com/pfeif/hx-complete",
+    "license": "BSD-3-Clause",
+    "categories": [
+        "Other"
+    ],
+    "keywords": [
+        "HTMX",
+        "attributes",
+        "hypermedia"
+    ],
+    "engines": {
+        "vscode": "^1.93.0"
+    },
+    "preview": false,
+    "contributes": {
+        "html": {
+            "customData": [
+                "./data/htmx2.html-data.json"
+            ]
+        }
+    },
+    "files": [
+        "data",
+        "static",
+        "LICENSE.md"
+    ],
+    "qna": "marketplace",
+    "icon": "./static/icon.png"
+}
