@@ -1,1 +1,6 @@
 **/.vscode
+**/.idea
+
+**/*venv
+**/.mypy_cache
+**/__pycache__
