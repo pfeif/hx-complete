@@ -3,14 +3,13 @@ import os
 import xml.etree.ElementTree
 import zipfile
 from io import BytesIO
-from typing import NamedTuple
 
 import requests
 
+from models import Attribute, HtmlData, Reference, Value, ValueSet
+
 
 def main():
-    # TODO: Use dataclasses next time.
-
     release_version = get_release_version()
     release_archive = download_release(release_version)
     attribute_names = get_attribute_names(release_archive)
@@ -133,18 +132,18 @@ def get_descriptions(attributes: list[str], archive: bytes) -> dict[str, str]:
     return descriptions
 
 
-def get_global_attributes(attributes: dict[str, str]) -> list[dict[str, str | list[dict[str, str]]]]:
+def get_global_attributes(attributes: dict[str, str]) -> list[Attribute]:
     """
     Create the global attributes for the extension's `html-data.json` file.
 
     :param dict[str, str] attributes: an htmx attribute/description dictionary
 
     :returns: a list of global attributes
-    :rtype: list[dict[str, str | list[dict[str, str]]]]
+    :rtype: list[Attribute]
     """
-    global_attributes: list[dict[str, str | list[dict[str, str]]]] = []
+    global_attributes: list[Attribute] = []
 
-    for attribute, description in attributes.items():
+    for name, description in attributes.items():
         if '@/' in description:
             description = description.replace('@/', 'https://htmx.org/')
 
@@ -152,122 +151,104 @@ def get_global_attributes(attributes: dict[str, str]) -> list[dict[str, str | li
             description = description.replace('.md', '/')
 
         for prefix in ['', 'data-']:
-            global_attribute: dict[str, str | list[dict[str, str]]] = {
-                'name': f'{prefix}{attribute}',
-                'description': description,
-                'valueSet': attribute if attribute in ['hx-swap', 'hx-swap-oob', 'hx-target'] else '',
-                'references': [
-                    {
-                        'name': f'`{attribute}` documentation on htmx.org',
-                        'url': f'https://htmx.org/attributes/{attribute}/',
-                    },
-                ],
-            }
+            attribute = Attribute(
+                f'{prefix}{name}',
+                description,
+                name if name in ['hx-swap', 'hx-swap-oob', 'hx-target'] else None,
+                [Reference(f'`{name}` documentation on htmx.org', f'https://htmx.org/attributes/{name}/')],
+            )
 
-            if global_attribute['valueSet'] == '':
-                del global_attribute['valueSet']
-
-            global_attributes.append(global_attribute)
+            global_attributes.append(attribute)
 
     return global_attributes
 
 
-def get_value_sets() -> list[dict[str, str | list[dict[str, str]]]]:
+def get_value_sets() -> list[ValueSet]:
     """
     Get the value sets for the `html-data.json` file.
 
     :returns: a list of value sets
-    :rtype: list[dict[str, str | list[dict[str, str]]]]
+    :rtype: list[ValueSet]
     """
     # TODO: Think about ways to automate this.
 
-    value = NamedTuple('value', [('name', str), ('description', str)])
-
-    hx_swap: dict[str, str | list[dict[str, str]]] = {'name': 'hx-swap', 'values': []}
-    hx_swap_oob: dict[str, str | list[dict[str, str]]] = {'name': 'hx-swap-oob', 'values': [{'name': 'true'}]}
-    hx_target: dict[str, str | list[dict[str, str]]] = {'name': 'hx-target', 'values': []}
+    hx_swap = ValueSet('hx-swap')
+    hx_swap_oob = ValueSet('hx-swap-oob', [Value('true')])
+    hx_target = ValueSet('hx-target')
 
     swap_values = [
-        value('innerHTML', 'Replace the inner html of the target element'),
-        value('outerHTML', 'Replace the entire target element with the response'),
-        value('textContext', 'Replace the text content of the target element, without parsing the response as HTML'),
-        value('beforebegin', 'Insert the response before the target element'),
-        value('afterbegin', 'Insert the response before the first child of the target element'),
-        value('beforeend', 'Insert the response after the last child of the target element'),
-        value('afterend', 'Insert the response after the target element'),
-        value('delete', 'Deletes the target element regardless of the response'),
-        value('none', 'Does not append content from response (out of band items will still be processed).'),
+        Value('innerHTML', 'Replace the inner html of the target element'),
+        Value('outerHTML', 'Replace the entire target element with the response'),
+        Value('textContext', 'Replace the text content of the target element, without parsing the response as HTML'),
+        Value('beforebegin', 'Insert the response before the target element'),
+        Value('afterbegin', 'Insert the response before the first child of the target element'),
+        Value('beforeend', 'Insert the response after the last child of the target element'),
+        Value('afterend', 'Insert the response after the target element'),
+        Value('delete', 'Deletes the target element regardless of the response'),
+        Value('none', 'Does not append content from response (out of band items will still be processed).'),
     ]
 
     target_values = [
-        value(
+        Value(
             '<CSS query selector>',
             'A CSS query selector of the element to target.',
         ),
-        value(
+        Value(
             'this',
             '`this` which indicates that the element that the `hx-target` attribute is on is the target.',
         ),
-        value(
+        Value(
             'closest <CSS selector>',
             '`closest <CSS selector>` which will find the [closest](https://developer.mozilla.org/docs/Web/API/Element/closest) ancestor element or itself, that matches the given CSS selector (e.g. `closest tr` will target the closest table row to the element).',
         ),
-        value(
+        Value(
             'find <CSS selector>',
             '`find <CSS selector>` which will find the first child descendant element that matches the given CSS selector.',
         ),
-        value(
+        Value(
             'next',
             '`next` which resolves to [element.nextElementSibling](https://developer.mozilla.org/docs/Web/API/Element/nextElementSibling)',
         ),
-        value(
+        Value(
             'next <CSS selector>',
             '`next <CSS selector>` which will scan the DOM forward for the first element that matches the given CSS selector. (e.g. `next .error` will target the closest following sibling element with `error` class)',
         ),
-        value(
+        Value(
             'previous',
             '`previous` which resolves to [element.previousElementSibling](https://developer.mozilla.org/docs/Web/API/Element/previousElementSibling)',
         ),
-        value(
+        Value(
             'previous <CSS selector>',
             '`previous <CSS selector>` which will scan the DOM backwards for the first element that matches the given CSS selector. (e.g `previous .error` will target the closest previous sibling with `error` class)',
         ),
     ]
 
     for swap_value in swap_values:
-        hx_swap['values'].append(swap_value._asdict())  # type: ignore
-        hx_swap_oob['values'].append(swap_value._asdict())  # type: ignore
+        hx_swap.values.append(swap_value)
+        hx_swap_oob.values.append(swap_value)
         if swap_value.name != 'none':
-            hx_swap_oob['values'].append(value(f'{swap_value.name}:<CSS selector>', swap_value.description)._asdict())  # type: ignore
+            hx_swap_oob.values.append(Value(f'{swap_value.name}:<CSS selector>', swap_value.description))
 
     for target_value in target_values:
-        hx_target['values'].append(target_value._asdict())  # type: ignore
+        hx_target.values.append(target_value)
 
     return [hx_swap, hx_swap_oob, hx_target]
 
 
-def write_output(
-    global_attributes: list[dict[str, str | list[dict[str, str]]]],
-    value_sets: list[dict[str, str | list[dict[str, str]]]],
-) -> None:
+def write_output(global_attributes: list[Attribute], value_sets: list[ValueSet]) -> None:
     """
     Create or replace the extension's `htmx2.html-data.json` file.
 
-    :param list[dict[str, str | list[dict[str, str]]]] global_attributes: a JSON-like `globalAttributes` object
-    :param list[dict[str, str | list[dict[str, str]]]] value_sets: a JSON-like valueSets object
+    :param list[Attribute] global_attributes: the htmx attributes
+    :param list[ValueSet] value_sets: the sets of values associated with attributes
     """
-    html_data: dict[str, float | list[None] | list[dict[str, str | list[dict[str, str]]]]] = {
-        'version': 1.1,
-        'tags': [],
-        'globalAttributes': global_attributes,
-        'valueSets': value_sets,
-    }
+    output_data = HtmlData(global_attributes, value_sets).as_dict()
 
     script_directory = os.path.dirname(os.path.abspath(__file__))
     output_path = os.path.abspath(os.path.join(script_directory, '..', 'data', 'htmx2.html-data.json'))
 
     with open(output_path, 'w') as output_file:
-        output_file.writelines(json.dumps(html_data, indent=4))
+        output_file.writelines(json.dumps(output_data, indent=4))
 
 
 if __name__ == '__main__':
