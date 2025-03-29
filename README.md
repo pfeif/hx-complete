@@ -41,7 +41,13 @@ While not highlighted throughout the [official documentation][htmx-docs], HTMX a
 
 ## Usage
 
-Just install the extension and start writing HTML with HTMX.
+This extension is available on:
+
+- [Visual Studio Marketplace][visual-studio-marketplace]
+- [Open VSX Registry][open-vsx-registry]
+- [GitHub][github]
+
+Choose the installation method you're comfortable with, and start writing HTML with HTMX.
 
 ## Screenshots
 
@@ -54,9 +60,11 @@ This extension is licensed under the very permissive, open-source BSD-3 Clause l
 The TL;DR of the license is that you can do whatever you want with the extension so long as you don't claim I endorse it.
 
 
+[example-gif]: https://github.com/pfeif/hx-complete/blob/main/static/example.gif?raw=true
+[github]: https://github.com/pfeif/hx-complete
 [htmx-docs]: https://htmx.org/docs/
 [htmx-main-page]: https://htmx.org/
+[open-vsx-registry]: https://open-vsx.org/extension/pfeif/hx-complete
+[visual-studio-marketplace]: https://marketplace.visualstudio.com/items?itemName=pfeif.hx-complete
 [vscode-custom-data]: https://github.com/microsoft/vscode-custom-data
 [vscode-html-languageservice]: https://github.com/microsoft/vscode-html-languageservice
-
-[example-gif]: https://github.com/pfeif/hx-complete/blob/main/static/example.gif?raw=true
