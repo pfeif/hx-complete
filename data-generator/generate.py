@@ -2,7 +2,7 @@ import json
 import os
 import xml.etree.ElementTree
 import zipfile
-from io import BytesIO
+from io import BytesIO, TextIOWrapper
 
 import requests
 
@@ -12,8 +12,8 @@ from models import Attribute, HtmlData, Reference, Value, ValueSet
 def main():
     release_version = get_release_version()
     release_archive = download_release(release_version)
-    attribute_names = get_attribute_names(release_archive)
-    attributes_with_descriptions = get_descriptions(attribute_names, release_archive)
+    attribute_names = get_attribute_names(release_archive, release_version)
+    attributes_with_descriptions = get_descriptions(attribute_names, release_archive, release_version)
     global_attributes = get_global_attributes(attributes_with_descriptions)
     value_sets = get_value_sets()
     write_output(global_attributes, value_sets)
@@ -23,7 +23,7 @@ def get_release_version() -> str:
     """
     Retrieve the latest htmx release identifier from the project's GitHub releases Atom feed.
 
-    :returns: a version string in the format 'vX.X.X'
+    :returns: a version string in the format `{MAJOR}.{MINOR}.{PATCH}`
     :rtype: str
     """
     try:
@@ -36,7 +36,7 @@ def get_release_version() -> str:
     latest_entry = feed_root.find('{http://www.w3.org/2005/Atom}entry')
     release_version = latest_entry.find('{http://www.w3.org/2005/Atom}title')  # type: ignore
 
-    version = release_version.text  # type: ignore
+    version = release_version.text.lstrip('v')  # type: ignore
 
     if not version:
         raise SystemExit
@@ -54,7 +54,7 @@ def download_release(version: str) -> bytes:
     :rtype: bytes
     """
     try:
-        response = requests.get(f'https://github.com/bigskysoftware/htmx/archive/refs/tags/{version}.zip', timeout=10)
+        response = requests.get(f'https://github.com/bigskysoftware/htmx/archive/refs/tags/v{version}.zip', timeout=10)
         response.raise_for_status()
 
         return response.content
@@ -62,11 +62,12 @@ def download_release(version: str) -> bytes:
         raise SystemExit(error) from error
 
 
-def get_attribute_names(archive: bytes) -> list[str]:
+def get_attribute_names(archive: bytes, version: str) -> list[str]:
     """
     Extract the htmx attribute names from the release's web docs.
 
     :param bytes archive: a binary release ZIP file
+    :param str version: the htmx version in the format `{MAJOR}.{MINOR}.{PATCH}`
 
     :returns: a list of htmx attributes
     :rtype: list[str]
@@ -74,13 +75,11 @@ def get_attribute_names(archive: bytes) -> list[str]:
     attributes: list[str] = []
 
     with zipfile.ZipFile(BytesIO(archive)) as source_code:
-        for zip_info in source_code.filelist:
-            if (
-                'attributes' in zip_info.filename
-                and zip_info.filename.endswith('.md')
-                and '_index' not in zip_info.filename
-            ):
-                attribute = zipfile.Path(source_code, zip_info.filename).name.removesuffix('.md')
+        attributes_path = f'htmx-{version}/www/content/attributes'
+
+        for filename in source_code.namelist():
+            if filename.startswith(f'{attributes_path}/hx-') and filename.endswith('.md'):
+                attribute = filename.removeprefix(f'{attributes_path}/').removesuffix('.md')
                 attributes.append(attribute)
 
     if not attributes:
@@ -89,13 +88,14 @@ def get_attribute_names(archive: bytes) -> list[str]:
     return attributes
 
 
-def get_descriptions(attributes: list[str], archive: bytes) -> dict[str, str]:
+def get_descriptions(attributes: list[str], archive: bytes, version: str) -> dict[str, str]:
     """
     Extract descriptions for htmx attributes from the reference section of the release's web docs,
     and pair them with their attributes.
 
     :param list[str] attributes: a list of htmx attributes
     :param bytes archive: a binary release ZIP file
+    :param str version: the htmx version in the format `{MAJOR}.{MINOR}.{PATCH}`
 
     :returns: a dictionary where the keys are attributes and the values are attribute descriptions
     :rtype: dict[str, str]
@@ -103,12 +103,9 @@ def get_descriptions(attributes: list[str], archive: bytes) -> dict[str, str]:
     lines: list[str] = []
 
     with zipfile.ZipFile(BytesIO(archive)) as source_code:
-        for zip_info in source_code.filelist:
-            if zip_info.filename.endswith('www/content/reference.md'):
-                path = zipfile.Path(source_code, zip_info.filename)
-                with path.open(encoding='utf-8') as file:
-                    lines = file.readlines()
-                break
+        with source_code.open(f'htmx-{version}/www/content/reference.md') as binary_file:
+            with TextIOWrapper(binary_file, encoding='utf-8') as file_content:
+                lines = file_content.readlines()
 
     remaining_attributes = attributes.copy()
     descriptions: dict[str, str] = {}
