@@ -1,0 +1,14 @@
+[project]
+name = "hx-complete-generator"
+version = "2025.10.4"
+description = "Data generator for the hx-complete extension"
+readme = "../README.md"
+requires-python = ">=3.13"
+dependencies = ["requests>=2.32"]
+
+[tool.ruff]
+line-length = 120
+target-version = "py313"
+
+[tool.ruff.format]
+quote-style = "single"

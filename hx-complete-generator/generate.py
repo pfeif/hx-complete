@@ -1,30 +1,33 @@
 import json
-import os
 import xml.etree.ElementTree
 import zipfile
-from io import BytesIO
+from io import BytesIO, TextIOWrapper
+from pathlib import Path
 
 import requests
 
+from get_version_number import get_version_number
 from models import Attribute, HtmlData, Reference, Value, ValueSet
+
+EXTENSION_DIRECTORY = (Path(__file__).parent.parent / 'hx-complete-extension').resolve()
 
 
 def main():
     release_version = get_release_version()
     release_archive = download_release(release_version)
-    attribute_names = get_attribute_names(release_archive)
-    attributes_with_descriptions = get_descriptions(attribute_names, release_archive)
+    attribute_names = get_attribute_names(release_archive, release_version)
+    attributes_with_descriptions = get_descriptions(attribute_names, release_archive, release_version)
     global_attributes = get_global_attributes(attributes_with_descriptions)
     value_sets = get_value_sets()
-    write_output(global_attributes, value_sets)
+    write_html_data(global_attributes, value_sets)
+    write_package_manifest()
 
 
 def get_release_version() -> str:
     """
     Retrieve the latest htmx release identifier from the project's GitHub releases Atom feed.
 
-    :returns: a version string in the format 'vX.X.X'
-    :rtype: str
+    :returns: a version string in the format `{MAJOR}.{MINOR}.{PATCH}`
     """
     try:
         response = requests.get('https://github.com/bigskysoftware/htmx/releases.atom', timeout=10)
@@ -36,7 +39,7 @@ def get_release_version() -> str:
     latest_entry = feed_root.find('{http://www.w3.org/2005/Atom}entry')
     release_version = latest_entry.find('{http://www.w3.org/2005/Atom}title')  # type: ignore
 
-    version = release_version.text  # type: ignore
+    version = release_version.text.lstrip('v')  # type: ignore
 
     if not version:
         raise SystemExit
@@ -51,10 +54,10 @@ def download_release(version: str) -> bytes:
     :param str version: the version identifier for the htmx release
 
     :returns: a binary release ZIP file
-    :rtype: bytes
     """
     try:
-        response = requests.get(f'https://github.com/bigskysoftware/htmx/archive/refs/tags/{version}.zip', timeout=10)
+        url = f'https://github.com/bigskysoftware/htmx/archive/refs/tags/v{version}.zip'
+        response = requests.get(url, timeout=10)
         response.raise_for_status()
 
         return response.content
@@ -62,25 +65,23 @@ def download_release(version: str) -> bytes:
         raise SystemExit(error) from error
 
 
-def get_attribute_names(archive: bytes) -> list[str]:
+def get_attribute_names(archive: bytes, version: str) -> list[str]:
     """
     Extract the htmx attribute names from the release's web docs.
 
     :param bytes archive: a binary release ZIP file
+    :param str version: the htmx version in the format `{MAJOR}.{MINOR}.{PATCH}`
 
     :returns: a list of htmx attributes
-    :rtype: list[str]
     """
     attributes: list[str] = []
 
     with zipfile.ZipFile(BytesIO(archive)) as source_code:
-        for zip_info in source_code.filelist:
-            if (
-                'attributes' in zip_info.filename
-                and zip_info.filename.endswith('.md')
-                and '_index' not in zip_info.filename
-            ):
-                attribute = zipfile.Path(source_code, zip_info.filename).name.removesuffix('.md')
+        attributes_path = f'htmx-{version}/www/content/attributes'
+
+        for filename in source_code.namelist():
+            if filename.startswith(f'{attributes_path}/hx-') and filename.endswith('.md'):
+                attribute = filename.removeprefix(f'{attributes_path}/').removesuffix('.md')
                 attributes.append(attribute)
 
     if not attributes:
@@ -89,26 +90,23 @@ def get_attribute_names(archive: bytes) -> list[str]:
     return attributes
 
 
-def get_descriptions(attributes: list[str], archive: bytes) -> dict[str, str]:
+def get_descriptions(attributes: list[str], archive: bytes, version: str) -> dict[str, str]:
     """
     Extract descriptions for htmx attributes from the reference section of the release's web docs,
     and pair them with their attributes.
 
     :param list[str] attributes: a list of htmx attributes
     :param bytes archive: a binary release ZIP file
+    :param str version: the htmx version in the format `{MAJOR}.{MINOR}.{PATCH}`
 
     :returns: a dictionary where the keys are attributes and the values are attribute descriptions
-    :rtype: dict[str, str]
     """
     lines: list[str] = []
 
     with zipfile.ZipFile(BytesIO(archive)) as source_code:
-        for zip_info in source_code.filelist:
-            if zip_info.filename.endswith('www/content/reference.md'):
-                path = zipfile.Path(source_code, zip_info.filename)
-                with path.open(encoding='utf-8') as file:
-                    lines = file.readlines()
-                break
+        with source_code.open(f'htmx-{version}/www/content/reference.md') as binary_file:
+            with TextIOWrapper(binary_file, encoding='utf-8') as file_content:
+                lines = file_content.readlines()
 
     remaining_attributes = attributes.copy()
     descriptions: dict[str, str] = {}
@@ -139,7 +137,6 @@ def get_global_attributes(attributes: dict[str, str]) -> list[Attribute]:
     :param dict[str, str] attributes: an htmx attribute/description dictionary
 
     :returns: a list of global attributes
-    :rtype: list[Attribute]
     """
     global_attributes: list[Attribute] = []
 
@@ -168,7 +165,6 @@ def get_value_sets() -> list[ValueSet]:
     Get the value sets for the `html-data.json` file.
 
     :returns: a list of value sets
-    :rtype: list[ValueSet]
     """
     # TODO: Think about ways to automate this.
 
@@ -219,13 +215,14 @@ def get_value_sets() -> list[ValueSet]:
         ),
         Value(
             'previous <CSS selector>',
-            '`previous <CSS selector>` which will scan the DOM backwards for the first element that matches the given CSS selector. (e.g `previous .error` will target the closest previous sibling with `error` class)',
+            '`previous <CSS selector>` which will scan the DOM backwards for the first element that matches the given CSS selector. (e.g. `previous .error` will target the closest previous sibling with `error` class)',
         ),
     ]
 
     for swap_value in swap_values:
         hx_swap.values.append(swap_value)
         hx_swap_oob.values.append(swap_value)
+
         if swap_value.name != 'none':
             hx_swap_oob.values.append(Value(f'{swap_value.name}:<CSS selector>', swap_value.description))
 
@@ -235,20 +232,36 @@ def get_value_sets() -> list[ValueSet]:
     return [hx_swap, hx_swap_oob, hx_target]
 
 
-def write_output(global_attributes: list[Attribute], value_sets: list[ValueSet]) -> None:
+def write_html_data(global_attributes: list[Attribute], value_sets: list[ValueSet]) -> None:
     """
-    Create or replace the extension's `htmx2.html-data.json` file.
+    Update the extension's `htmx2.html-data.json` file.
 
     :param list[Attribute] global_attributes: the htmx attributes
     :param list[ValueSet] value_sets: the sets of values associated with attributes
     """
-    output_data = HtmlData(global_attributes, value_sets).as_dict()
+    html_data = HtmlData(global_attributes, value_sets).as_dict()
 
-    script_directory = os.path.dirname(os.path.abspath(__file__))
-    output_path = os.path.abspath(os.path.join(script_directory, '..', 'data', 'htmx2.html-data.json'))
+    html_data_path = EXTENSION_DIRECTORY / 'htmx2.html-data.json'
 
-    with open(output_path, 'w') as output_file:
-        output_file.writelines(json.dumps(output_data, indent=4))
+    with html_data_path.open('w') as file:
+        json.dump(html_data, file, indent=4)
+
+
+def write_package_manifest() -> None:
+    """
+    Update the extension's `package.json` version.
+    """
+    version = get_version_number()
+
+    package_manifest_path = EXTENSION_DIRECTORY / 'package.json'
+
+    with package_manifest_path.open('r') as file:
+        package_manifest = json.load(file)
+
+    package_manifest['version'] = version
+
+    with package_manifest_path.open('w') as file:
+        json.dump(package_manifest, file, indent=4)
 
 
 if __name__ == '__main__':
