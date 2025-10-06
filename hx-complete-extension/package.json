@@ -21,15 +21,15 @@
     "contributes": {
         "html": {
             "customData": [
-                "./data/htmx2.html-data.json"
+                "./htmx2.html-data.json"
             ]
         }
     },
     "files": [
-        "data",
-        "static/icon.png",
-        "LICENSE.md"
+        "./htmx2.html-data.json",
+        "./images/icon.png",
+        "../LICENSE.md"
     ],
     "qna": "marketplace",
-    "icon": "./static/icon.png"
+    "icon": "./images/icon.png"
 }

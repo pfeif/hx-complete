@@ -1,0 +1,156 @@
+name: Release and publish
+
+on: [workflow_dispatch]
+
+jobs:
+  release:
+    runs-on: ubuntu-latest
+    env:
+      EXTENSION_DIRECTORY_PATH: ${{ github.workspace }}/hx-complete-extension
+      GENERATOR_DIRECTORY_PATH: ${{ github.workspace }}/hx-complete-generator
+      HTML_DATA_FILE_NAME: htmx2.html-data.json
+      HTML_DATA_FILE_PATH: ${{ github.workspace }}/hx-complete-extension/htmx2.html-data.json
+      PACKAGE_MANIFEST_FILE_NAME: package.json
+      PACKAGE_MANIFEST_FILE_PATH: ${{ github.workspace }}/hx-complete-extension/package.json
+    steps:
+      - name: "Check out repository"
+        uses: actions/checkout@v5
+        with:
+          fetch-tags: "true"
+
+      - name: "Set git credentials"
+        run: |
+          set -o errexit -o nounset -o pipefail
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+
+      - name: "Install uv"
+        uses: astral-sh/setup-uv@v6
+        with:
+          version: "latest"
+
+      - name: "Update extension files"
+        run: |
+          set -o errexit -o nounset -o pipefail
+          cd $GENERATOR_DIRECTORY_PATH
+          uv run generate.py
+
+      - name: "Verify changes in extension files"
+        run: |
+          set -o errexit -o nounset -o pipefail
+          git diff --exit-code $HTML_DATA_FILE_PATH
+          git diff --exit-code $PACKAGE_MANIFEST_FILE_PATH
+
+      - name: "Install jq"
+        run: |
+          set -o errexit -o nounset -o pipefail
+          sudo apt update && sudo apt install --assume-yes jq
+
+      - name: "Read package version"
+        id: read-package-version
+        run: |
+          set -o errexit -o nounset -o pipefail
+          cd $EXTENSION_DIRECTORY_PATH
+          VERSION=$(jq --raw-output '.version' $PACKAGE_MANIFEST_FILE_NAME)
+          echo "version=$VERSION" >> $GITHUB_OUTPUT
+
+      - name: "Add changes"
+        run: |
+          set -o errexit -o nounset -o pipefail
+          git add $HTML_DATA_FILE_PATH
+          git add $PACKAGE_MANIFEST_FILE_PATH
+
+      - name: "Verify changes"
+        run: |
+          set -o errexit -o nounset -o pipefail
+
+          if git diff --cached --quiet -- $HTML_DATA_FILE_PATH; then
+            echo "No changes in htmx2.html-data.json — stopping workflow."
+            exit 1
+          fi
+
+          if git diff --cached --quiet -- $PACKAGE_MANIFEST_FILE_PATH; then
+            echo "No changes in $PACKAGE_MANIFEST_FILE_NAME — stopping workflow."
+            exit 1
+          fi
+
+          PACKAGE_CHANGES=$(git diff --cached --numstat \
+            -- $PACKAGE_MANIFEST_FILE_PATH | \
+            awk '{added+=$1; removed+=$2} END {print added+removed}')
+
+          if [ "$PACKAGE_CHANGES" -gt 1 ]; then
+            echo "More than 1 line changed in $PACKAGE_MANIFEST_FILE_NAME ($PACKAGE_CHANGES) — stopping workflow."
+            exit 1
+          fi
+
+      - name: "Get htmx version number"
+        id: get-htmx-version-number
+        run: |
+          set -o errexit -o nounset -o pipefail
+
+          HTMX_ATOM_FEED_URL="https://github.com/bigskysoftware/htmx/releases.atom"
+
+          HTMX_VERSION=$(curl --silent --fail "$HTMX_ATOM_FEED_URL" | \
+                         awk -F '[<>]' '/<entry>/ {a=1} a==1 && /<title>/ {print $3; exit}' | \
+                         sed 's/^v//')
+
+                         if [ -z "$HTMX_VERSION" ]; then
+          echo "Error: Could not retrieve htmx version from Atom feed."
+            exit 1
+          fi
+
+          echo "htmx_version=$HTMX_VERSION" >> $GITHUB_OUTPUT
+
+      - name: "Commit changes"
+        run: |
+          set -o errexit -o nounset -o pipefail
+
+          EXTENSION_VERSION=${{ steps.read-package-version.outputs.version }}
+          HTMX_VERSION=${{ steps.get-htmx-version-number.outputs.htmx_version }}
+
+          echo "Auto-update extension to version $EXTENSION_VERSION (htmx v$HTMX_VERSION)" >> commit_message.txt
+          echo "" >> commit_message.txt
+          echo "Generated content reflects htmx version v$HTMX_VERSION." >> commit_message.txt
+          echo "" >> commit_message.txt
+          echo "Files updated:" >> commit_message.txt
+          echo "" >> commit_message.txt
+          echo "- $HTML_DATA_FILE_NAME" >> commit_message.txt
+          echo "- $PACKAGE_MANIFEST_FILE_NAME" >> commit_message.txt
+
+          git commit --file="commit_message.txt"
+          git push
+
+      - name: "Create GitHub release"
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          set -o errexit -o nounset -o pipefail
+          VERSION=${{ steps.read-package-version.outputs.version }}
+          git tag "$VERSION"
+          git push origin $VERSION
+          gh release create "$VERSION" \
+            --title "Release $VERSION" \
+            --notes "Automated release of version $VERSION"
+
+      - name: "Install publishing tools"
+        run: |
+          set -o errexit -o nounset -o pipefail
+          sudo apt install --assume-yes npm libsecret-1-dev
+          npm install --global @vscode/vsce
+          npm install --global ovsx
+
+      - name: "Publish to Visual Studio Marketplace"
+        env:
+          VSCE_PAT: ${{ secrets.VSCE_TOKEN }}
+        run: |
+          set -o errexit -o nounset -o pipefail
+          cd $EXTENSION_DIRECTORY_PATH
+          vsce publish
+
+      - name: "Publish to OpenVSX Registry"
+        env:
+          OVSX_PAT: ${{ secrets.OVSX_TOKEN }}
+        run: |
+          set -o errexit -o nounset -o pipefail
+          cd $EXTENSION_DIRECTORY_PATH
+          ovsx publish

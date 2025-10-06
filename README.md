@@ -10,10 +10,6 @@ Because this extension contributes to only this language service, it does not pr
 
 This extension supports HTMX v2 while some of the other available extensions support HTMX v1.
 
-I don't think there's anything wrong with that, especially because according to the project homepage:
-
-> ... It is not currently marked as [`latest`](https://docs.npmjs.com/cli/v10/commands/npm-dist-tag#purpose) in NPM so that people using the [1.x line](https://v1.htmx.org/) are not accidentally upgraded.
-
 ### `data-*` attribute support
 
 Unlike other extensions, this one also includes `data-*` attribute support.
@@ -43,9 +39,9 @@ While not highlighted throughout the [official documentation][htmx-docs], HTMX a
 
 This extension is available on:
 
+- [GitHub][github]
 - [Visual Studio Marketplace][visual-studio-marketplace]
 - [Open VSX Registry][open-vsx-registry]
-- [GitHub][github]
 
 Choose the installation method you're comfortable with, and start writing HTML with HTMX.
 
@@ -60,7 +56,7 @@ This extension is licensed under the very permissive, open-source BSD-3 Clause l
 The TL;DR of the license is that you can do whatever you want with the extension so long as you don't claim I endorse it.
 
 
-[example-gif]: https://github.com/pfeif/hx-complete/blob/main/static/example.gif?raw=true
+[example-gif]: https://github.com/pfeif/hx-complete/blob/main/hx-complete-extension/images/example.gif?raw=true
 [github]: https://github.com/pfeif/hx-complete
 [htmx-docs]: https://htmx.org/docs/
 [htmx-main-page]: https://htmx.org/
