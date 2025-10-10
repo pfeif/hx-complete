@@ -1,6 +1,6 @@
 [project]
 name = "hx-complete-generator"
-version = "2025.10.4"
+version = "2025.10.10"
 description = "Data generator for the hx-complete extension"
 license = "../LICENSE.md"
 readme = "../README.md"
