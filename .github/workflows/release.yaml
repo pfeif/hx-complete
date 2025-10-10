@@ -8,8 +8,11 @@ jobs:
     env:
       EXTENSION_DIRECTORY_PATH: ${{ github.workspace }}/hx-complete-extension
       GENERATOR_DIRECTORY_PATH: ${{ github.workspace }}/hx-complete-generator
+      WORKFLOW_SCRIPTS_PATH: ${{ github.workspace }}/.github/workflows/scripts
+
       HTML_DATA_FILE_NAME: htmx2.html-data.json
       HTML_DATA_FILE_PATH: ${{ github.workspace }}/hx-complete-extension/htmx2.html-data.json
+
       PACKAGE_MANIFEST_FILE_NAME: package.json
       PACKAGE_MANIFEST_FILE_PATH: ${{ github.workspace }}/hx-complete-extension/package.json
     steps:
@@ -20,8 +23,6 @@ jobs:
 
       - name: "Set git credentials"
         run: |
-          set -o errexit -o nounset -o pipefail
-
           git config user.name "github-actions[bot]"
           git config user.email "github-actions[bot]@users.noreply.github.com"
 
@@ -31,46 +32,21 @@ jobs:
           version: "latest"
 
       - name: "Update extension files"
-        run: |
-          set -o errexit -o nounset -o pipefail
-
-          cd $GENERATOR_DIRECTORY_PATH
-          uv run generate.py
+        working-directory: ${{ env.GENERATOR_DIRECTORY_PATH }}
+        run: uv run generate.py
 
       - name: "Verify changes in extension files"
-        run: |
-          set -o errexit -o nounset -o pipefail
-
-          if git diff --quiet -- $HTML_DATA_FILE_PATH; then
-            echo "No changes in htmx2.html-data.json — stopping workflow."
-            exit 1
-          fi
-
-          if git diff --quiet -- $PACKAGE_MANIFEST_FILE_PATH; then
-            echo "No changes in $PACKAGE_MANIFEST_FILE_NAME — stopping workflow."
-            exit 1
-          fi
-
-          PACKAGE_CHANGES=$(git diff --numstat -- $PACKAGE_MANIFEST_FILE_PATH | \
-            awk '{added+=$1; removed+=$2} END {print added+removed}') || true
-
-          if [ "$PACKAGE_CHANGES" -gt 2 ]; then
-            echo "More than 2 lines changed in $PACKAGE_MANIFEST_FILE_NAME ($PACKAGE_CHANGES) — stopping workflow."
-            exit 1
-          fi
+        working-directory: ${{ env.WORKFLOW_SCRIPTS_PATH }}
+        run: uv run verify_changes.py
 
       - name: "Install jq"
-        run: |
-          set -o errexit -o nounset -o pipefail
-
-          sudo apt update && sudo apt install --assume-yes jq
+        run: sudo apt update && sudo apt install --assume-yes jq
 
       - name: "Read version information"
         id: read-version-information
+        working-directory: ${{ env.EXTENSION_DIRECTORY_PATH }}
         run: |
           set -o errexit -o nounset -o pipefail
-
-          cd $EXTENSION_DIRECTORY_PATH
 
           EXTENSION_VERSION=$(jq --raw-output '.version' $PACKAGE_MANIFEST_FILE_NAME)
           HTMX_VERSION=$(jq --raw-output '.htmxVersion' $PACKAGE_MANIFEST_FILE_NAME)
@@ -80,8 +56,6 @@ jobs:
 
       - name: "Add changes"
         run: |
-          set -o errexit -o nounset -o pipefail
-
           git add $HTML_DATA_FILE_PATH
           git add $PACKAGE_MANIFEST_FILE_PATH
 
@@ -129,17 +103,11 @@ jobs:
       - name: "Publish to Visual Studio Marketplace"
         env:
           VSCE_PAT: ${{ secrets.VSCE_TOKEN }}
-        run: |
-          set -o errexit -o nounset -o pipefail
-
-          cd $EXTENSION_DIRECTORY_PATH
-          vsce publish
+        working-directory: ${{ env.EXTENSION_DIRECTORY_PATH }}
+        run: vsce publish
 
       - name: "Publish to OpenVSX Registry"
         env:
           OVSX_PAT: ${{ secrets.OVSX_TOKEN }}
-        run: |
-          set -o errexit -o nounset -o pipefail
-
-          cd $EXTENSION_DIRECTORY_PATH
-          ovsx publish
+        working-directory: ${{ env.EXTENSION_DIRECTORY_PATH }}
+        run: ovsx publish
