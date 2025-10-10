@@ -1,68 +1,29 @@
 import json
-import xml.etree.ElementTree
 import zipfile
 from io import BytesIO, TextIOWrapper
 from pathlib import Path
 
-import requests
-
-from get_version_number import get_version_number
+from calver import get_version_number
+from github import download_release_archive, get_latest_release_version
 from models import Attribute, HtmlData, Reference, Value, ValueSet
 
 EXTENSION_DIRECTORY = (Path(__file__).parent.parent / 'hx-complete-extension').resolve()
 
 
 def main():
-    release_version = get_release_version()
-    release_archive = download_release(release_version)
-    attribute_names = get_attribute_names(release_archive, release_version)
-    attributes_with_descriptions = get_descriptions(attribute_names, release_archive, release_version)
+    htmx_atom_feed = 'https://github.com/bigskysoftware/htmx/releases.atom'
+    htmx_version = get_latest_release_version(htmx_atom_feed).lstrip('v')
+
+    htmx_archive_url = f'https://github.com/bigskysoftware/htmx/archive/refs/tags/v{htmx_version}.zip'
+    release_archive = download_release_archive(htmx_archive_url)
+
+    attribute_names = get_attribute_names(release_archive, htmx_version)
+    attributes_with_descriptions = get_descriptions(attribute_names, release_archive, htmx_version)
     global_attributes = get_global_attributes(attributes_with_descriptions)
     value_sets = get_value_sets()
+
     write_html_data(global_attributes, value_sets)
-    write_package_manifest()
-
-
-def get_release_version() -> str:
-    """
-    Retrieve the latest htmx release identifier from the project's GitHub releases Atom feed.
-
-    :returns: a version string in the format `{MAJOR}.{MINOR}.{PATCH}`
-    """
-    try:
-        response = requests.get('https://github.com/bigskysoftware/htmx/releases.atom', timeout=10)
-        response.raise_for_status()
-    except requests.RequestException as error:
-        raise SystemExit(error) from error
-
-    feed_root = xml.etree.ElementTree.fromstring(response.text)
-    latest_entry = feed_root.find('{http://www.w3.org/2005/Atom}entry')
-    release_version = latest_entry.find('{http://www.w3.org/2005/Atom}title')  # type: ignore
-
-    version = release_version.text.lstrip('v')  # type: ignore
-
-    if not version:
-        raise SystemExit
-
-    return version
-
-
-def download_release(version: str) -> bytes:
-    """
-    Download an htmx release's ZIP archive.
-
-    :param str version: the version identifier for the htmx release
-
-    :returns: a binary release ZIP file
-    """
-    try:
-        url = f'https://github.com/bigskysoftware/htmx/archive/refs/tags/v{version}.zip'
-        response = requests.get(url, timeout=10)
-        response.raise_for_status()
-
-        return response.content
-    except requests.RequestException as error:
-        raise SystemExit(error) from error
+    write_package_manifest(htmx_version)
 
 
 def get_attribute_names(archive: bytes, version: str) -> list[str]:
@@ -247,7 +208,7 @@ def write_html_data(global_attributes: list[Attribute], value_sets: list[ValueSe
         json.dump(html_data, file, indent=4)
 
 
-def write_package_manifest() -> None:
+def write_package_manifest(htmx_version: str) -> None:
     """
     Update the extension's `package.json` version.
     """
@@ -259,6 +220,7 @@ def write_package_manifest() -> None:
         package_manifest = json.load(file)
 
     package_manifest['version'] = version
+    package_manifest['htmxVersion'] = htmx_version
 
     with package_manifest_path.open('w') as file:
         json.dump(package_manifest, file, indent=4)

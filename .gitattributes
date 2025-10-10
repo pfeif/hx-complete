@@ -1,7 +1,11 @@
 * text=auto
 
-*.png binary
 *.gif binary
+*.png binary
 *.vsix binary
 
+*.json text diff=json
+*.md text diff=markdown
 *.py text diff=python
+*.toml text diff=toml
+*.yaml text diff=yaml

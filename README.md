@@ -1,8 +1,14 @@
 # hx-complete
 
-This extension provides Visual Studio Code with auto-completion support for [HTMX][htmx-main-page]'s v2 HTML attributes. It accomplishes this by contributing [custom data][vscode-custom-data] to VS Code's [HTML language service][vscode-html-languageservice].
+This extension provides Visual Studio Code with auto-completion support for
+[HTMX][htmx-main-page]'s v2 HTML attributes. It accomplishes this by
+contributing [custom data][vscode-custom-data] to VS Code's
+[HTML language service][vscode-html-languageservice].
 
-Because this extension contributes to only this language service, it does not provide support for programming language or templating language file types. For example, VS Code will not understand that your `.js`, `.cshtml`, and `.jinja` files may contain HTMX attributes just because you installed this extension.
+Because this extension contributes to only this language service, it does not
+provide support for programming language or templating language file types. For
+example, VS Code will not understand that your `.js`, `.cshtml`, and `.jinja`
+files may contain HTMX attributes just because you installed this extension.
 
 ## Why this extension?
 
@@ -14,7 +20,10 @@ This extension supports HTMX v2 while some of the other available extensions sup
 
 Unlike other extensions, this one also includes `data-*` attribute support.
 
-While not highlighted throughout the [official documentation][htmx-docs], HTMX allows you to use `data-hx-*` attributes as an alternative to `hx-*` attributes for the sake of using standard HTML attributes. The feature is mentioned under the "htmx in a Nutshell" section of those docs.
+While not highlighted throughout the [official documentation][htmx-docs], HTMX
+allows you to use `data-hx-*` attributes as an alternative to `hx-*` attributes
+for the sake of using standard HTML attributes. The feature is mentioned under
+the "htmx in a Nutshell" section of those docs.
 
 > It's worth mentioning that, if you prefer, you can use the [`data-`](https://html.spec.whatwg.org/multipage/dom.html#attr-data-*) prefix when using htmx:
 >
@@ -24,12 +33,12 @@ While not highlighted throughout the [official documentation][htmx-docs], HTMX a
 
 ## Should *you* install this extension?
 
-### Probably if:
+### Probably if
 
 - You want HTMX v2 auto-completion support.
 - You want that support to include `data-*` attributes.
 
-### Probably not if: 
+### Probably not if
 
 - You are using HTMX v1.
 - You need incredibly detailed hover-over documentation.
@@ -43,7 +52,8 @@ This extension is available on:
 - [Visual Studio Marketplace][visual-studio-marketplace]
 - [Open VSX Registry][open-vsx-registry]
 
-Choose the installation method you're comfortable with, and start writing HTML with HTMX.
+Choose the installation method you're comfortable with, and start writing HTML
+with HTMX.
 
 ## Screenshots
 
@@ -51,10 +61,11 @@ Choose the installation method you're comfortable with, and start writing HTML w
 
 ## License
 
-This extension is licensed under the very permissive, open-source BSD-3 Clause license. Details can be found in [`LICENSE.md`](./LICENSE.md).
+This extension is licensed under the very permissive, open-source BSD-3 Clause
+license. Details can be found in [`LICENSE.md`](./LICENSE.md).
 
-The TL;DR of the license is that you can do whatever you want with the extension so long as you don't claim I endorse it.
-
+The TL;DR of the license is that you can do whatever you want with the extension
+so long as you don't claim I endorse it.
 
 [example-gif]: https://github.com/pfeif/hx-complete/blob/main/hx-complete-extension/images/example.gif?raw=true
 [github]: https://github.com/pfeif/hx-complete
