@@ -52,7 +52,7 @@ jobs:
           fi
 
           PACKAGE_CHANGES=$(git diff --numstat -- $PACKAGE_MANIFEST_FILE_PATH | \
-            awk '{added+=$1; removed+=$2} END {print added+removed}')
+            awk '{added+=$1; removed+=$2} END {print added+removed}') || true
 
           if [ "$PACKAGE_CHANGES" -gt 2 ]; then
             echo "More than 2 lines changed in $PACKAGE_MANIFEST_FILE_NAME ($PACKAGE_CHANGES) — stopping workflow."
