@@ -21,6 +21,7 @@ jobs:
       - name: "Set git credentials"
         run: |
           set -o errexit -o nounset -o pipefail
+
           git config user.name "github-actions[bot]"
           git config user.email "github-actions[bot]@users.noreply.github.com"
 
@@ -32,81 +33,64 @@ jobs:
       - name: "Update extension files"
         run: |
           set -o errexit -o nounset -o pipefail
+
           cd $GENERATOR_DIRECTORY_PATH
           uv run generate.py
 
       - name: "Verify changes in extension files"
         run: |
           set -o errexit -o nounset -o pipefail
-          git diff --exit-code $HTML_DATA_FILE_PATH
-          git diff --exit-code $PACKAGE_MANIFEST_FILE_PATH
 
-      - name: "Install jq"
-        run: |
-          set -o errexit -o nounset -o pipefail
-          sudo apt update && sudo apt install --assume-yes jq
-
-      - name: "Read package version"
-        id: read-package-version
-        run: |
-          set -o errexit -o nounset -o pipefail
-          cd $EXTENSION_DIRECTORY_PATH
-          VERSION=$(jq --raw-output '.version' $PACKAGE_MANIFEST_FILE_NAME)
-          echo "version=$VERSION" >> $GITHUB_OUTPUT
-
-      - name: "Add changes"
-        run: |
-          set -o errexit -o nounset -o pipefail
-          git add $HTML_DATA_FILE_PATH
-          git add $PACKAGE_MANIFEST_FILE_PATH
-
-      - name: "Verify changes"
-        run: |
-          set -o errexit -o nounset -o pipefail
-
-          if git diff --cached --quiet -- $HTML_DATA_FILE_PATH; then
+          if git diff --quiet -- $HTML_DATA_FILE_PATH; then
             echo "No changes in htmx2.html-data.json — stopping workflow."
             exit 1
           fi
 
-          if git diff --cached --quiet -- $PACKAGE_MANIFEST_FILE_PATH; then
+          if git diff --quiet -- $PACKAGE_MANIFEST_FILE_PATH; then
             echo "No changes in $PACKAGE_MANIFEST_FILE_NAME — stopping workflow."
             exit 1
           fi
 
-          PACKAGE_CHANGES=$(git diff --cached --numstat \
-            -- $PACKAGE_MANIFEST_FILE_PATH | \
+          PACKAGE_CHANGES=$(git diff --numstat -- $PACKAGE_MANIFEST_FILE_PATH | \
             awk '{added+=$1; removed+=$2} END {print added+removed}')
 
-          if [ "$PACKAGE_CHANGES" -gt 1 ]; then
-            echo "More than 1 line changed in $PACKAGE_MANIFEST_FILE_NAME ($PACKAGE_CHANGES) — stopping workflow."
+          if [ "$PACKAGE_CHANGES" -gt 2 ]; then
+            echo "More than 2 lines changed in $PACKAGE_MANIFEST_FILE_NAME ($PACKAGE_CHANGES) — stopping workflow."
             exit 1
           fi
 
-      - name: "Get htmx version number"
-        id: get-htmx-version-number
+      - name: "Install jq"
         run: |
           set -o errexit -o nounset -o pipefail
 
-          HTMX_ATOM_FEED_URL="https://github.com/bigskysoftware/htmx/releases.atom"
+          sudo apt update && sudo apt install --assume-yes jq
 
-          HTMX_VERSION=$(curl --silent --fail "$HTMX_ATOM_FEED_URL" | \
-                         awk -F '[<>]' '/<entry>/ {a=1} a==1 && /<title>/ {print $3; exit}' | \
-                         sed 's/^v//')
+      - name: "Read version information"
+        id: read-version-information
+        run: |
+          set -o errexit -o nounset -o pipefail
 
-                         if [ -z "$HTMX_VERSION" ]; then
-          echo "Error: Could not retrieve htmx version from Atom feed."
-            exit 1
-          fi
+          cd $EXTENSION_DIRECTORY_PATH
 
+          EXTENSION_VERSION=$(jq --raw-output '.version' $PACKAGE_MANIFEST_FILE_NAME)
+          HTMX_VERSION=$(jq --raw-output '.htmxVersion' $PACKAGE_MANIFEST_FILE_NAME)
+
+          echo "extension_version=$EXTENSION_VERSION" >> $GITHUB_OUTPUT
           echo "htmx_version=$HTMX_VERSION" >> $GITHUB_OUTPUT
+
+      - name: "Add changes"
+        run: |
+          set -o errexit -o nounset -o pipefail
+
+          git add $HTML_DATA_FILE_PATH
+          git add $PACKAGE_MANIFEST_FILE_PATH
 
       - name: "Commit changes"
         run: |
           set -o errexit -o nounset -o pipefail
 
-          EXTENSION_VERSION=${{ steps.read-package-version.outputs.version }}
-          HTMX_VERSION=${{ steps.get-htmx-version-number.outputs.htmx_version }}
+          EXTENSION_VERSION=${{ steps.read-version-information.outputs.extension_version }}
+          HTMX_VERSION=${{ steps.read-version-information.outputs.htmx_version }}
 
           echo "Auto-update extension to version $EXTENSION_VERSION (htmx v$HTMX_VERSION)" >> commit_message.txt
           echo "" >> commit_message.txt
@@ -125,16 +109,19 @@ jobs:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
           set -o errexit -o nounset -o pipefail
-          VERSION=${{ steps.read-package-version.outputs.version }}
-          git tag "$VERSION"
-          git push origin $VERSION
-          gh release create "$VERSION" \
-            --title "Release $VERSION" \
-            --notes "Automated release of version $VERSION"
+
+          EXTENSION_VERSION=${{ steps.read-version-information.outputs.extension_version }}
+
+          git tag "$EXTENSION_VERSION"
+          git push origin $EXTENSION_VERSION
+          gh release create "$EXTENSION_VERSION" \
+            --title "Release $EXTENSION_VERSION" \
+            --notes "Automated release of version $EXTENSION_VERSION"
 
       - name: "Install publishing tools"
         run: |
           set -o errexit -o nounset -o pipefail
+
           sudo apt install --assume-yes npm libsecret-1-dev
           npm install --global @vscode/vsce
           npm install --global ovsx
@@ -144,6 +131,7 @@ jobs:
           VSCE_PAT: ${{ secrets.VSCE_TOKEN }}
         run: |
           set -o errexit -o nounset -o pipefail
+
           cd $EXTENSION_DIRECTORY_PATH
           vsce publish
 
@@ -152,5 +140,6 @@ jobs:
           OVSX_PAT: ${{ secrets.OVSX_TOKEN }}
         run: |
           set -o errexit -o nounset -o pipefail
+
           cd $EXTENSION_DIRECTORY_PATH
           ovsx publish

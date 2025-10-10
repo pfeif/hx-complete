@@ -3,6 +3,7 @@
     "displayName": "hx-complete",
     "description": "HTMX attribute auto-completion support for Visual Studio Code",
     "version": "2025.3.29",
+    "htmxVersion": "",
     "publisher": "pfeif",
     "repository": "https://github.com/pfeif/hx-complete",
     "license": "BSD-3-Clause",
