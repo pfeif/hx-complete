@@ -37,7 +37,7 @@ jobs:
 
       - name: "Verify changes in extension files"
         working-directory: ${{ env.WORKFLOW_SCRIPTS_PATH }}
-        run: uv run verify_changes.py
+        run: python verify_changes.py
 
       - name: "Install jq"
         run: sudo apt update && sudo apt install --assume-yes jq
