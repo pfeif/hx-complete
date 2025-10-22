@@ -1,0 +1,5 @@
+# Files specified below are excluded from the generated VSIX.
+
+.git*
+.vscode
+images/example.gif

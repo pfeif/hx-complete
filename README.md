@@ -14,7 +14,8 @@ files may contain HTMX attributes just because you installed this extension.
 
 ### v2 attribute support
 
-This extension supports HTMX v2 while some of the other available extensions support HTMX v1.
+This extension supports HTMX v2 while some of the other available extensions
+support HTMX v1.
 
 ### `data-*` attribute support
 
@@ -48,7 +49,7 @@ the "htmx in a Nutshell" section of those docs.
 
 This extension is available on:
 
-- [GitHub][github]
+- [GitHub][hx-complete]
 - [Visual Studio Marketplace][visual-studio-marketplace]
 - [Open VSX Registry][open-vsx-registry]
 
@@ -67,10 +68,11 @@ license. Details can be found in [`LICENSE.md`](./LICENSE.md).
 The TL;DR of the license is that you can do whatever you want with the extension
 so long as you don't claim I endorse it.
 
-[example-gif]: https://github.com/pfeif/hx-complete/blob/main/hx-complete-extension/images/example.gif?raw=true
-[github]: https://github.com/pfeif/hx-complete
+[example-gif]: https://github.com/pfeif/hx-complete/blob/main/images/example.gif?raw=true
+[hx-complete]: https://github.com/pfeif/hx-complete
 [htmx-docs]: https://htmx.org/docs/
 [htmx-main-page]: https://htmx.org/
+[hx-complete-generator]: https://github.com/pfeif/hx-complete-generator
 [open-vsx-registry]: https://open-vsx.org/extension/pfeif/hx-complete
 [visual-studio-marketplace]: https://marketplace.visualstudio.com/items?itemName=pfeif.hx-complete
 [vscode-custom-data]: https://github.com/microsoft/vscode-custom-data

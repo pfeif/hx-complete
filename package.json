@@ -11,8 +11,14 @@
         "Other"
     ],
     "keywords": [
-        "HTMX",
-        "attributes",
+        "attribute",
+        "autocomplete",
+        "completion",
+        "customdata",
+        "html",
+        "htmx",
+        "hx-attributes",
+        "hx",
         "hypermedia"
     ],
     "engines": {
@@ -22,15 +28,10 @@
     "contributes": {
         "html": {
             "customData": [
-                "./htmx2.html-data.json"
+                "custom-data/htmx2.html-data.json"
             ]
         }
     },
-    "files": [
-        "./htmx2.html-data.json",
-        "./images/icon.png",
-        "../LICENSE.md"
-    ],
     "qna": "marketplace",
-    "icon": "./images/icon.png"
+    "icon": "images/icon.png"
 }
