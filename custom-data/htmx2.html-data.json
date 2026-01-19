@@ -722,7 +722,7 @@
                     "description": "Replace the entire target element with the response"
                 },
                 {
-                    "name": "textContext",
+                    "name": "textContent",
                     "description": "Replace the text content of the target element, without parsing the response as HTML"
                 },
                 {
@@ -774,11 +774,11 @@
                     "description": "Replace the entire target element with the response"
                 },
                 {
-                    "name": "textContext",
+                    "name": "textContent",
                     "description": "Replace the text content of the target element, without parsing the response as HTML"
                 },
                 {
-                    "name": "textContext:<CSS selector>",
+                    "name": "textContent:<CSS selector>",
                     "description": "Replace the text content of the target element, without parsing the response as HTML"
                 },
                 {
